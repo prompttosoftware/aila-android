@@ -1,0 +1,56 @@
+android {
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.aila"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled true
+            isShrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.room:room-runtime:2.6.1'
+    implementation 'org.tensorflow:tensorflow-lite-task-text:0.4.5'
+    kapt 'androidx.room:room-compiler:2.6.1'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+task verifyModelSizes {
+    doLast {
+        def modelsDir = file('src/main/assets/models')
+        if (!modelsDir.exists()) {
+            throw new GradleException("Models directory not found: ${modelsDir.absolutePath}")
+        }
+
+        def models = fileTree(modelsDir).include('**/*.tflite')
+        models.each { f ->
+            def maxSizeBytes = 35 * 1024 * 1024 // 35MB
+            if (f.length() > maxSizeBytes) {
+                throw new GradleException("Model size verification failed: ${f.name} (${f.length() / (1024 * 1024).round(2)} MB) exceeds 35 MB limit")
+            }
+        }
+        println "Model size verification passed: All models under 35 MB."
+    }
+}
+
+preBuild.dependsOn verifyModelSizes
