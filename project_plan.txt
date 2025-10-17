@@ -1,0 +1,194 @@
+### 1. User Requirements Summary
+- "AI language learning mobile app (Android & IOS). Fully on device. Styled like a phone app so it seems and feels like calling people when using."
+- Contact page: 
+    * "Add a ‘contact’: opens a new contact modal where the user can enter name, birthday, personality, gender or voice, and language"
+    * "List of contacts with call, delete, and edit buttons"
+- Calling page: 
+    * "Hang up button: ends call, Speaker button, Name of contact"
+- Core functionality:
+    * "Downloads and uses small AI models on device. AI for audio to text -> AI for text to text (main conversation and language tutor) -> AI for text to speech"
+    * "AI speaks to the user in the language they want to learn. Starts simple and gradually gets more advanced"
+    * Error handling protocol: 
+        - "If user doesn’t understand... AI should first say it didn’t understand and offer correct word... If user continues to struggle respond in user’s native language"
+    * Vocabulary management:
+        - "Proficient vocabulary: things user has used correctly"
+        - "Struggling list: words/phrases user struggled with (classified by severity)"
+        - AI "gradually focus on and repeat the words from the struggling list" using "spaced repetition" techniques
+- AI personality requirements:
+    * "Fake life generated for each contact: history, family, job, interests"
+    * "Every time user ‘calls’... ringing part generates what contact did since last call based on time elapsed"
+    * "History should be given to conversation to make it unique"
+- Critical constraints: "Fully on device", "no network" processing, headless container environment (no emulator access)
+
+### 2. Missing Details Filled In
+- **On-device model specification**: User did not specify models. Chose Whisper Tiny (ASR) and mT5-small (text) for Android (TensorFlow Lite), Core ML equivalents for iOS. Rationale: Under 100MB total, CPU-compatible, multilingual support.
+- **Native language fallback**: User didn't specify storage location. Added "user_native_language" field in app settings (not contacts) with default="en". Rationale: System-wide setting independent of contacts.
+- **Proficiency tracking**: User didn't specify metrics. Implemented SM-2 spaced repetition algorithm with severity scoring (1-3). Words move to proficient after 2 correct uses within 24h. Rationale: Evidence-based language retention technique.
+- **Ringing narrative generation**: User didn't specify time handling. Added "last_call_time" in contacts DB with time-based prompts (e.g., "In the past {delta}, what has {contact} been doing? Current time: {now}"). Rationale: Creates dynamic time-aware narratives.
+- **Vocabulary storage schema**: User didn't specify implementation. Created dual DB tables: 
+    * `vocabulary_proficient` (word, language, last_practiced)
+    * `vocabulary_struggling` (word, severity, retries_needed)
+  Rationale: Optimized for fast SRS algorithm execution on mobile.
+- **Model download strategy**: User said "downloads" but "fully on device". Models pre-bundled in app assets (no runtime download). Rationale: Mandatory for headless container build and offline-only operation.
+
+### 3. High-Level Project Overview
+Production-grade offline language tutor that simulates realistic phone conversations with AI contacts. Delivers adaptive language practice through: 
+1) Dynamic contact personalities with evolving histories 
+2) Seamless native-language fallback during struggles 
+3) Spaced repetition for vocabulary retention. 
+Worth building because it provides low-stakes immersive practice with personalized feedback - the only mobile app that combines spaced repetition with contextual phone-call simulation for language acquisition.
+
+### 4. Architecture & Technology Decisions
+**Monolith vs Microservices**: Monolithic app (single process per platform). Justification: Fully on-device constraint eliminates network calls between components; avoids unnecessary IPC overhead.
+
+**Core Tech Stack**:
+- Android: Kotlin, Jetpack Compose (UI), Room (DB), TensorFlow Lite (ML), WorkManager (SRS scheduler)
+- iOS: Swift, SwiftUI (UI), CoreData (DB), Core ML (ML), OperationQueue (SRS scheduler)
+- *All models bundled during build* (no runtime download)
+
+**Data Layer**: 
+- Android: Room DB with DAOs for `ContactEntity`, `VocabularyProficientEntity`, `VocabularyStrugglingEntity`
+- iOS: CoreData with NSManagedObjects for same schemas
+- Encryption: Device-level encryption only (no app-level encryption - relies on OS security)
+
+**Verification Strategy**:
+- Validate Room/DB schemas via `RoomDatabase.getOpenHelper().getReadableDatabase().isDatabaseIntegrityOk()`
+- Confirm model sizes via `build.gradle` asset size checks
+- Manual inspection of SRS logic in `ProficiencyTracker.kt`/`ProficiencyTracker.swift`
+
+### 5. Security Design
+**Authentication**: None (fully offline). Unauthorized access impossible per device security standards.
+
+**Input Validation**:
+- Contacts: Regex validation for birthday (ISO 8601), allowed language codes (whitelist from ContactLanguage.kt/swift)
+- Voice input: ASR confidence threshold (0.7) - discard low-confidence utterances
+- Model inputs: Sanitize with `TextUtils.normalize()` (Android) / `NSString.folding()` (iOS)
+
+**Storage Sanitization**:
+- Vocabulary data: Auto-escape during DB storage via Room/NSManagedObject
+- Contact "personality" field: Strip HTML/JS in setter methods
+
+**Verification Strategy**:
+- Manual test: Enter `"<script>alert()</script>"` in contact modal -> verify stored as plain text
+- Unit test: Edge dates (Feb 29, 1900) in `ContactValidationTest.kt`
+- Manual inspection: `ASRProcessor.validateInput()` severity handling
+
+### 6. Project Skeleton & File Layout
+```
+aila-android/
+├── app/
+│   ├── src/main/
+│   │   ├── AndroidManifest.xml
+│   │   ├── java/com/aila/
+│   │   │   ├── data/ (DB entities, DAOs)
+│   │   │   ├── domain/ (vocabulary, contact logic)
+│   │   │   ├── presentation/ (Compose UI)
+│   │   │   └── speech/ (ASR/TTS processors)
+│   │   └── res/ (models bundled in assets/)
+│   └── build.gradle
+└── build.gradle
+
+aila-ios/
+├── Aila/
+│   ├── Data/ (CoreData models)
+│   ├── Domain/ (vocabulary, contact logic)
+│   ├── Presentation/ (SwiftUI views)
+│   ├── Speech/ (ASR/TTS processors)
+│   └── Resources/ (Core ML models)
+├── Aila.xcodeproj
+└── Package.swift
+```
+**Verification Strategy**: Confirm via `tree -L 3` in each repo root; manual inspection of asset folder contents.
+
+### 7. Module-by-Module Creation Strategy
+**Module**: `domain/ContactManager.kt` (Android) / `Domain/ContactManager.swift` (iOS)
+- Purpose: CRUD operations for contacts with life history generation
+- Public Interface: 
+  `createContact(name, birthday, personality, voice, language) : Contact`
+  `generateRingingNarrative(contact: Contact) : String`
+- Implementation: 
+  - Use mT5-small with prompt template: 
+    `"Generate a realistic life event for {contact.name} since {last_call}. Current context: {contact.state}. Time elapsed: {delta}"`
+- Verification: Unit test `testRingingNarrativeGeneration()` with stubbed model
+
+**Module**: `domain/VocabularyTracker.kt` (Android) / `Domain/VocabularyTracker.swift` (iOS)
+- Purpose: Tracks word proficiency and manages SRS scheduling
+- Public Interface:
+  `processUtterance(userText: String, targetLanguage: String) : UtteranceResult`
+  `getReviewWords() : List<Word>`
+- Implementation: 
+  - SM-2 algorithm with severity modifier (struggling words reviewed 3x more frequently)
+  - Async persistence after each conversation turn
+- Verification: Unit test `testSM2Model()` verifying interval calculations
+
+**Module**: `speech/ConversationFlow.kt` (Android) / `Speech/ConversationFlow.swift` (iOS)
+- Purpose: Executes AI pipeline (ASR -> Tutor -> TTS) with fallback handling
+- Public Interface:
+  `startConversation(contact: Contact)`
+  `handleUserSpeech(audio: ByteArray)`
+- Implementation: 
+  - State machine tracking consecutive failures (max=2 before native fallback)
+  - In-memory conversation history for context
+- Verification: 
+  - Manual run of `__main__` with test audio files
+  - Unit test `testFallbackFlow()` simulating 3 failed attempts
+
+### 8. Dependency & Build Management
+**Android Dependencies** (app/build.gradle):
+```
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.room:room-runtime:2.6.1'
+    implementation 'org.tensorflow:tensorflow-lite-task-text:0.4.5'
+    testImplementation 'junit:junit:4.13.2'
+}
+```
+**iOS Dependencies** (Package.swift):
+```
+dependencies: [
+    .package(url: "https://github.com/kean/Nuke", from: "12.0.0"),
+    .package(url: "https://github.com/stephencelis/SQLite.swift", from: "0.13.0")
+]
+```
+**Build Commands**:
+- Android: `./gradlew assembleDebug` (output: `app/build/outputs/apk/debug/app-debug.apk`)
+- iOS: `xcodebuild -scheme Aila -configuration Debug` (simulator build only)
+
+**Verification Strategy**: 
+- Build must exit 0
+- Verify APK size < 50MB (`adb shell dumpsys package com.aila | grep "codePath"`)
+- Confirm model assets present in build output
+
+### 9. Local Simulation & Stubbing
+**External System**: ASR/TTS/Tutor models
+- **Stub Implementation**:
+  ```kotlin
+  // Android: speech/stubs/AiServiceStub.kt
+  class AiServiceStub : ASRService, TutorService, TTSClient {
+      override fun transcribe(audio: ByteArray) = "stub"
+      override fun respond(context: String) = "stub response"
+      override fun generateSpeech(text: String) = byteArrayOf(0x00)
+  }
+  ```
+- **Real System Switch**: 
+  ```kotlin
+  // Use Dagger/Hilt to inject real vs stub based on BuildConfig.DEBUG
+  class AppModule {
+      @Provides @Singleton fun provideASR() = if (BuildConfig.DEBUG) 
+          AiServiceStub() else TensorFlowASR()
+  }
+  ```
+**Verification Strategy**: 
+- Unit test verifies stub invocation count with `mockkVerify`
+- Manual inspection of DI configuration for correct environment binding
+
+### 10. Completion Definition
+"100% complete" requires:
+- [ ] All modules implemented with 100% stubbed functionality (no crashes when clicked)
+- [ ] Build succeeds for both platforms with `exit 0`
+- [ ] Key user flows verified manually:
+    * **Contact Flow**: Add contact → edit → delete (all persist)
+    * **Call Flow**: Start call → simulate struggle sequence → verify native fallback
+    * **Vocab Flow**: Use new word 3x → confirm moved to proficient
+- [ ] All security validations pass edge cases
+- [ ] Vocabulary SRS algorithm correctly schedules reviews (verified in unit tests)
