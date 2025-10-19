@@ -1,18 +1,23 @@
-package com.aila.domain
+package com.benjosm.ailaandroid.domain
 
-import com.aila.data.local.VocabularyProficientDao
-import com.aila.data.local.VocabularyStrugglingDao
-import com.aila.model.Word
-import com.aila.model.UtteranceResult
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.ui.text.TextGranularity.Companion.Word
+import com.benjosm.ailaandroid.data.local.VocabularyProficientDao
+import com.benjosm.ailaandroid.data.local.VocabularyStrugglingDao
+import com.benjosm.ailaandroid.model.Word
+import com.benjosm.ailaandroid.model.UtteranceResult
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 class VocabularyTracker @Inject constructor(
     private val proficientDao: VocabularyProficientDao,
     private val strugglingDao: VocabularyStrugglingDao
 ) {
+    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun processUtterance(text: String, targetLanguage: String): UtteranceResult {
         return withContext(Dispatchers.IO) {
             val words = tokenize(text)

@@ -1,6 +1,9 @@
-package com.aila.speech
+package com.benjosm.ailaandroid.speech
 
 import androidx.work.*
+import androidx.work.WorkManager
+import com.benjosm.ailaandroid.domain.Contact
+import com.benjosm.ailaandroid.domain.VocabularyTracker
 import kotlinx.coroutines.*
 import javax.inject.Inject
 import java.util.concurrent.TimeUnit

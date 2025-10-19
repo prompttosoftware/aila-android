@@ -1,4 +1,4 @@
-package com.aila.data
+package com.benjosm.ailaandroid.data
 
 import android.text.Html
 import android.text.TextUtils

@@ -1,4 +1,4 @@
-package com.aila.presentation
+package com.benjosm.ailaandroid.presentation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -6,6 +6,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,9 +18,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aila.model.Contact
-import com.aila.flow.ConversationFlow
-import com.aila.utils.ContactManager
+import com.benjosm.ailaandroid.domain.Contact
+import com.benjosm.ailaandroid.domain.ContactManager
+import com.benjosm.ailaandroid.model.Contact
+import com.benjosm.ailaandroid.flow.ConversationFlow
+import com.benjosm.ailaandroid.speech.ConversationFlow
+import com.benjosm.ailaandroid.utils.ContactManager
 
 @Composable
 fun CallingScreen(

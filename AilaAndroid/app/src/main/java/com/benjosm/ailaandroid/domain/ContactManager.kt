@@ -1,10 +1,13 @@
-package com.aila.domain
+package com.benjosm.ailaandroid.domain
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
-import com.aila.data.local.ContactDao
-import com.aila.data.local.ContactEntity
-import com.aila.ai.AiService
+import com.benjosm.ailaandroid.data.local.ContactDao
+import com.benjosm.ailaandroid.data.local.ContactEntity
+import com.benjosm.ailaandroid.ai.AiService
+import com.benjosm.ailaandroid.data.ContactEntity
 import dagger.hilt.android.scopes.ViewModelScoped
 import java.time.Duration
 import java.time.Instant
@@ -38,6 +41,7 @@ class ContactManager @Inject constructor(
      * @return The created Contact domain object
      * @throws IllegalArgumentException if validation fails
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun createContact(
         name: String,
         birthday: String,

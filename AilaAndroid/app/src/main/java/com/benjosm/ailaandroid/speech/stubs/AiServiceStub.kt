@@ -1,8 +1,8 @@
-package com.aila.speech.stubs
+package com.benjosm.ailaandroid.speech.stubs
 
-import com.aila.speech.processor.ASRProcessor
-import com.aila.speech.tutor.TutorService
-import com.aila.speech.tts.TTSClient
+import com.benjosm.ailaandroid.speech.processor.ASRProcessor
+import com.benjosm.ailaandroid.speech.tutor.TutorService
+import com.benjosm.ailaandroid.speech.tts.TTSClient
 
 /**
  * Stub implementation of AI services that provides predictable dummy responses

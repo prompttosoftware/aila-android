@@ -1,9 +1,11 @@
-package com.aila.di
+package com.benjosm.ailaandroid.di
 
 import android.content.Context
-import com.aila.ai.ASRProcessor
-import com.aila.ai.TutorService
-import com.aila.ai.stub.AiServiceStub
+import com.benjosm.ailaandroid.ai.ASRProcessor
+import com.benjosm.ailaandroid.ai.TutorService
+import com.benjosm.ailaandroid.ai.stub.AiServiceStub
+import com.benjosm.ailaandroid.speech.stubs.AiServiceStub
+import com.google.android.datatransport.runtime.dagger.Module
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
